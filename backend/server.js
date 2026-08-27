@@ -8,7 +8,7 @@ import {
   listAppointments,
   getBookedTimes,
 } from "./appointmentsStore.js";
-import { createDoctor, listDoctors } from "./doctorsstore.js";
+import { createDoctor, listDoctors } from "./doctorsStore.js";
 import { startReminderScheduler } from "./reminderScheduler.js";
 
 const app = express();

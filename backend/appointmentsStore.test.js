@@ -9,7 +9,7 @@ import {
   markReminder6hSent,
   resetAppointments,
 } from "./appointmentsStore.js";
-import { createDoctor, resetDoctors } from "./doctorsstore.js";
+import { createDoctor, resetDoctors } from "./doctorsStore.js";
 
 let mongod;
 
