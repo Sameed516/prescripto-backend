@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import { connectDB } from "./db.js";
 import { createUser, authenticateUser, resetUsers } from "./authStore.js";
 import {
@@ -13,7 +14,24 @@ import { startReminderScheduler } from "./reminderScheduler.js";
 const app = express();
 const port = process.env.PORT || 3001;
 
+app.use(cors());
 app.use(express.json());
+
+// Connect to DB per request for serverless execution
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("Database connection error:", err);
+    res.status(500).json({ success: false, message: "Database connection failure" });
+  }
+});
+
+// Root Route
+app.get("/", (req, res) => {
+  res.send("Prescripto Backend API is live!");
+});
 
 app.post("/api/auth", async (req, res) => {
   const { mode, name, email, password } = req.body;
@@ -33,7 +51,6 @@ app.post("/api/auth", async (req, res) => {
     .json({ success: false, message: "Invalid request mode" });
 });
 
-// Dev/test convenience only — wipes the user collection. Not exposed in production.
 if (process.env.NODE_ENV !== "production") {
   app.post("/api/reset", async (_req, res) => {
     await resetUsers();
@@ -43,13 +60,11 @@ if (process.env.NODE_ENV !== "production") {
 
 app.post("/api/doctors", async (req, res) => {
   const { name, role, fee, image, availability } = req.body;
-
   const result = await createDoctor({ name, role, fee, image, availability });
 
   if (!result.success) {
     return res.status(400).json(result);
   }
-
   return res.json(result);
 });
 
@@ -73,7 +88,6 @@ app.post("/api/appointments", async (req, res) => {
   if (!result.success) {
     return res.status(400).json(result);
   }
-
   return res.json(result);
 });
 
@@ -82,8 +96,6 @@ app.get("/api/appointments", async (_req, res) => {
   res.json({ success: true, appointments });
 });
 
-// Used by the booking page to know which times are already taken for a
-// given doctor/date, without exposing other patients' details.
 app.get("/api/appointments/availability", async (req, res) => {
   const { doctorName, date } = req.query;
 
@@ -97,16 +109,11 @@ app.get("/api/appointments/availability", async (req, res) => {
   res.json({ success: true, bookedTimes });
 });
 
-const start = async () => {
-  await connectDB();
-
+if (process.env.NODE_ENV !== "production") {
   app.listen(port, () => {
     console.log(`Auth server running at http://localhost:${port}`);
     startReminderScheduler();
   });
-};
+}
 
-start().catch((error) => {
-  console.error("Failed to start server:", error.message);
-  process.exit(1);
-});
+export default app;
