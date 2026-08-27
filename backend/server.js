@@ -1,4 +1,3 @@
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { connectDB } from "./db.js";
@@ -17,16 +16,19 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Connect to DB per request for serverless execution
-app.use(async (req, res, next) => {
+// Helper middleware to ensure DB connection without crashing serverless cold starts
+const ensureDbConnected = async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (err) {
-    console.error("Database connection error:", err);
+    console.error("Database connection error:", err.message);
     res.status(500).json({ success: false, message: "Database connection failure" });
   }
-});
+};
+
+// Apply DB connection helper to all routes
+app.use(ensureDbConnected);
 
 // Root Route
 app.get("/", (req, res) => {
